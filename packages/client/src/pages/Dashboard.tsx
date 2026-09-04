@@ -293,7 +293,7 @@ export default function Dashboard() {
           
           {/* --- DASHBOARD TAB --- */}
           {activeTab === 'dashboard' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6 items-start">
               {summary?.watchlist?.items?.map((item: any) => {
                 const digest = summary.digest?.find((d: any) => d.symbol === item.symbol);
                 const live = livePrices[item.symbol];
