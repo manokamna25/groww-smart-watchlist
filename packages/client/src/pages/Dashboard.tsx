@@ -63,6 +63,7 @@ export default function Dashboard() {
   const [selectedWatchlistId] = useState<string | null>(null);
   const [addSymbol, setAddSymbol] = useState('');
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
+  const [expandedIntel, setExpandedIntel] = useState<number | null>(null);
   const [aiExplainingSymbol, setAiExplainingSymbol] = useState<string | null>(null);
   const [showMathEventId, setShowMathEventId] = useState<string | null>(null);
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
@@ -660,26 +661,58 @@ export default function Dashboard() {
                 <p className="text-white/60 text-sm">The Z-score engine is currently scanning 2,412 active equities. The following assets are showing severe deviation from their rolling volatility baseline.</p>
               </div>
               <div className="space-y-4">
-                {mockIntelligence.map((item, i) => (
-                  <div key={i} className="flex bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden hover:bg-white/[0.05] transition-all cursor-pointer">
-                    <div className={`w-2 ${item.tier === 'critical' ? 'bg-red-500' : item.tier === 'meaningful' ? 'bg-orange-500' : 'bg-yellow-500'}`} />
-                    <div className="flex-1 p-5 flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="font-bold text-lg">{item.sym}</h3>
-                          <ChangeBadge tier={item.tier} />
+                {mockIntelligence.map((item, i) => {
+                  const isExpanded = expandedIntel === i;
+                  return (
+                  <div key={i} className="flex flex-col bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden hover:bg-white/[0.05] transition-all cursor-pointer" onClick={() => setExpandedIntel(isExpanded ? null : i)}>
+                    <div className="flex">
+                      <div className={`w-2 ${item.tier === 'critical' ? 'bg-red-500' : item.tier === 'meaningful' ? 'bg-orange-500' : 'bg-yellow-500'}`} />
+                      <div className="flex-1 p-5 flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3 mb-2">
+                            <h3 className="font-bold text-lg">{item.sym}</h3>
+                            <ChangeBadge tier={item.tier} />
+                          </div>
+                          <p className="text-sm text-white/60">{item.desc}</p>
                         </div>
-                        <p className="text-sm text-white/60">{item.desc}</p>
-                      </div>
-                      <div className="text-right ml-8">
-                        <div className="font-mono text-lg font-bold">₹{item.price.toFixed(2)}</div>
-                        <div className={`font-mono text-sm ${item.pct > 0 ? 'text-[#00D09C]' : 'text-[#EF4444]'}`}>
-                          {item.pct > 0 ? '+' : ''}{item.pct.toFixed(2)}%
+                        <div className="text-right ml-8">
+                          <div className="font-mono text-lg font-bold">₹{item.price.toFixed(2)}</div>
+                          <div className={`font-mono text-sm ${item.pct > 0 ? 'text-[#00D09C]' : 'text-[#EF4444]'}`}>
+                            {item.pct > 0 ? '+' : ''}{item.pct.toFixed(2)}%
+                          </div>
                         </div>
                       </div>
                     </div>
+                    {isExpanded && (
+                      <div className="border-t border-white/10 bg-black/40 backdrop-blur-md p-5 space-y-4 animate-slide-up relative z-10">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs font-semibold text-white/40 uppercase tracking-widest">AI Intelligence Report</span>
+                        </div>
+                        <div className="space-y-3">
+                          <div className="text-sm text-white/80 p-4 bg-white/5 rounded-xl border border-white/10">
+                            <strong>Detailed Analysis:</strong> Our global scanning engine has flagged {item.sym} due to anomalous volume profiles relative to sector benchmarks.
+                            Algorithms project a {item.pct > 0 ? 'continuation' : 'correction'} based on historical order book imbalances similar to this pattern.
+                          </div>
+                          
+                          <div className="mt-4 pt-4 border-t border-white/5 flex gap-3">
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setTradeModal({ isOpen: true, symbol: item.sym, action: 'BUY', price: item.price, eventTier: item.tier }); }}
+                              className="flex-1 py-2.5 rounded-lg bg-[#00D09C]/10 hover:bg-[#00D09C]/20 border border-[#00D09C]/30 text-[#00D09C] font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                            >
+                              <span>🛒</span> Smart Buy
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); setTradeModal({ isOpen: true, symbol: item.sym, action: 'SELL', price: item.price, eventTier: item.tier }); }}
+                              className="flex-1 py-2.5 rounded-lg bg-[#EF4444]/10 hover:bg-[#EF4444]/20 border border-[#EF4444]/30 text-[#EF4444] font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                            >
+                              <span>📉</span> Smart Sell
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           )}
@@ -750,8 +783,8 @@ export default function Dashboard() {
                 Your Assets <span className="text-xs px-2 py-0.5 bg-white/10 rounded-full text-white/50">Smart Scanning Active</span>
               </h3>
               
-              <div className="overflow-hidden rounded-xl border border-white/10 bg-white/[0.01]">
-                <table className="w-full text-left text-sm">
+              <div className="overflow-x-auto rounded-xl border border-white/10 bg-white/[0.01]">
+                <table className="w-full text-left text-sm whitespace-nowrap min-w-[600px]">
                   <thead className="bg-white/[0.02] border-b border-white/10">
                     <tr>
                       <th className="px-6 py-4 font-medium text-white/40">Asset</th>
