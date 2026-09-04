@@ -11,6 +11,9 @@ export const redisSub = new Redis(env.REDIS_URL, {
   lazyConnect: true,
 });
 
+redisPub.on('error', () => { /* ignore, handled by fallback */ });
+redisSub.on('error', () => { /* ignore, handled by fallback */ });
+
 export async function initRedis() {
   if (redisPub.status === 'ready' || redisPub.status === 'connecting') return;
   try {
