@@ -17,7 +17,7 @@ export class SimulatedMarketDataSource implements MarketDataSource {
   private intervalId: NodeJS.Timeout | null = null;
   private instruments: Map<string, InstrumentProfile> = new Map();
   private indexPrice: number = 22000.0;
-  private pendingInjections: Map<string, 'spike' | 'gap' | 'volume_anomaly'> = new Map();
+  private pendingInjections: Map<string, 'spike' | 'spike_up' | 'spike_down' | 'gap' | 'volume_anomaly'> = new Map();
 
   constructor() {
     this.initInstruments();
@@ -78,7 +78,7 @@ export class SimulatedMarketDataSource implements MarketDataSource {
     return Array.from(this.instruments.values());
   }
 
-  public injectEvent(symbol: string, type: 'spike' | 'gap' | 'volume_anomaly') {
+  public injectEvent(symbol: string, type: 'spike' | 'spike_up' | 'spike_down' | 'gap' | 'volume_anomaly') {
     const cleanSymbol = symbol.toUpperCase();
     if (!this.instruments.has(cleanSymbol)) {
       throw new Error(`Symbol ${cleanSymbol} not recognized in market simulator.`);
