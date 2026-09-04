@@ -28,4 +28,3 @@ services:
 databases:
   - name: smart-watchlist-db
     databaseName: smart_watchlist
-    user: postgres
