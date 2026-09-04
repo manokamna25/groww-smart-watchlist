@@ -24,7 +24,7 @@ export function CommandPalette({ isOpen, onClose, symbols, onAction }: CommandPa
   const q = query.toLowerCase();
   
   // Generate dynamic commands based on search
-  const commands = [
+  const commands: { id: string; icon: string; label: string; action: string; payload?: string }[] = [
     { id: 'home', icon: '🏠', label: 'Go to Dashboard', action: 'TAB_DASHBOARD' },
     { id: 'intel', icon: '🧠', label: 'Open Intelligence', action: 'TAB_INTEL' },
     { id: 'voice', icon: '🔊', label: 'Toggle Voice Alerts', action: 'TOGGLE_VOICE' },

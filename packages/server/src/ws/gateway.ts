@@ -122,7 +122,7 @@ export class SocketGateway {
     return this.refCountMap.get(symbol.toUpperCase()) || 0;
   }
 
-  public broadcastDirect(symbol: string, eventName: 'tick' | 'change_event', payload: any) {
+  public broadcastDirect(symbol: string, eventName: 'tick' | 'change_event' | 'options:tick', payload: any) {
     if (this.io) {
       this.io.to(`symbol:${symbol.toUpperCase()}`).emit(eventName, payload);
     }

@@ -816,7 +816,7 @@ export default function Dashboard() {
               
               <div className="space-y-8">
                 {symbols.length > 0 ? (
-                  symbols.map(sym => (
+                  symbols.map((sym: string) => (
                     <OptionsChain key={sym} optionsData={optionsData[sym]} />
                   ))
                 ) : (
