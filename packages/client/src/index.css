@@ -1,0 +1,66 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-groww-bg text-groww-text-primary font-sans antialiased;
+  }
+  * {
+    @apply border-groww-border;
+  }
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-groww-bg;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-groww-border rounded-full;
+  }
+}
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-groww-surface rounded-xl border border-groww-border p-4 
+           transition-all duration-200 hover:border-groww-green/30;
+  }
+  .btn-primary {
+    @apply bg-groww-green hover:bg-groww-green-dark text-groww-bg font-semibold 
+           px-4 py-2 rounded-lg transition-all duration-200 
+           active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-groww-surface-2 hover:bg-groww-border text-groww-text-primary 
+           font-medium px-4 py-2 rounded-lg transition-all duration-200 
+           border border-groww-border active:scale-[0.97];
+  }
+  .input-field {
+    @apply bg-groww-surface-2 border border-groww-border rounded-lg px-4 py-2.5 
+           text-groww-text-primary placeholder-groww-text-muted 
+           focus:outline-none focus:border-groww-green/60 focus:ring-1 focus:ring-groww-green/30 
+           transition-all duration-200;
+  }
+  .badge {
+    @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold;
+  }
+  .badge-quiet { @apply bg-tier-quiet/20 text-tier-quiet; }
+  .badge-notable { @apply bg-tier-notable/20 text-tier-notable; }
+  .badge-meaningful { @apply bg-tier-meaningful/20 text-tier-meaningful; }
+  .badge-critical { @apply bg-tier-critical/20 text-tier-critical animate-pulse-soft; }
+  .badge-live { @apply bg-freshness-live/20 text-freshness-live; }
+  .badge-delayed { @apply bg-freshness-delayed/20 text-freshness-delayed; }
+  .badge-stale { @apply bg-freshness-stale/20 text-freshness-stale; }
+}

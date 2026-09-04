@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: smart-watchlist
+    env: node
+    buildCommand: npm install && npm run db:generate && npm run build
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: smart-watchlist-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: smart-watchlist-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: PORT
+        value: 10000
+
+  - type: redis
+    name: smart-watchlist-redis
+    ipAllowList: [] # only allow internal connections
+
+databases:
+  - name: smart-watchlist-db
+    databaseName: smart_watchlist
+    user: postgres

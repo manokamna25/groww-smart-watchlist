@@ -1,0 +1,21 @@
+{
+  "name": "smart-watchlist-monorepo",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "start": "npm run build && cd packages/server && NODE_ENV=production node dist/index.js",
+    "dev": "npm run dev --workspace=packages/server",
+    "dev:client": "npm run dev --workspace=packages/client",
+    "dev:all": "npm run dev --workspace=packages/server & npm run dev --workspace=packages/client",
+    "build": "npm run build --workspaces",
+    "build:client": "npm run build --workspace=packages/client",
+    "test": "npm run test --workspace=packages/server",
+    "db:migrate": "npm run db:migrate --workspace=packages/server",
+    "db:push": "npm run db:push --workspace=packages/server",
+    "db:generate": "npm run db:generate --workspace=packages/server",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down"
+  }
+}
