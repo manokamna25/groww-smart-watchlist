@@ -43,9 +43,13 @@ export default function Dashboard() {
   const [livePrices, setLivePrices] = useState<Record<string, { price: number; ts: string; prevPrice?: number }>>({});
   const [liveEvents, setLiveEvents] = useState<any[]>([]);
   
-  // Hackathon demo state
   const [devInjectSymbol, setDevInjectSymbol] = useState('RELIANCE');
   const [devInjectType, setDevInjectType] = useState('spike');
+
+  // Elite Features State
+  const [pushNotification, setPushNotification] = useState<any>(null);
+  const [stressTestActive, setStressTestActive] = useState(false);
+  const [stressProgress, setStressProgress] = useState(100);
 
   // Queries
   const { data: watchlists, isLoading } = useQuery({
@@ -112,6 +116,12 @@ export default function Dashboard() {
   const handleChangeEvent = useCallback((data: any) => {
     setLiveEvents((prev) => [data, ...prev.slice(0, 19)]);
     refetchSummary();
+    
+    // Trigger Push Notification for critical/meaningful events
+    if (data.tier === 'critical' || data.tier === 'meaningful') {
+      setPushNotification(data);
+      setTimeout(() => setPushNotification(null), 6000);
+    }
   }, []);
 
   useWatchlistSocket(symbols, handleTick, handleChangeEvent);
@@ -138,8 +148,41 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#030305] text-white flex overflow-hidden font-sans selection:bg-groww-green/30">
+    <div className="min-h-screen bg-[#030305] text-white flex overflow-hidden font-sans selection:bg-groww-green/30 relative">
       
+      {/* --- ELITE FEATURE: iOS PUSH NOTIFICATION --- */}
+      <div 
+        className={`absolute top-6 left-1/2 -translate-x-1/2 z-[100] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+          pushNotification ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-24 opacity-0 scale-95 pointer-events-none'
+        }`}
+      >
+        <div 
+          onClick={() => {
+            setActiveTab('intelligence');
+            setPushNotification(null);
+          }}
+          className="w-[380px] bg-black/60 backdrop-blur-2xl border border-white/20 shadow-[0_20px_50px_rgba(0,0,0,0.5)] rounded-[24px] p-4 cursor-pointer hover:bg-black/80 transition-colors group relative overflow-hidden"
+        >
+          {/* Shine effect */}
+          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
+          
+          <div className="flex gap-4 relative z-10">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-groww-green to-blue-600 flex items-center justify-center shadow-lg flex-shrink-0">
+              <span className="text-white font-black text-xl">W</span>
+            </div>
+            <div className="flex-1 min-w-0 pt-0.5">
+              <div className="flex justify-between items-start mb-1">
+                <span className="font-semibold text-white/90 text-sm tracking-wide">Groww Intelligence</span>
+                <span className="text-xs text-white/40">now</span>
+              </div>
+              <p className="text-sm text-white font-medium truncate mb-1">⚠️ {pushNotification?.symbol} anomaly detected!</p>
+              <p className="text-xs text-white/60 line-clamp-2 leading-snug">{pushNotification?.narrative}</p>
+            </div>
+          </div>
+          <div className="mt-3 w-10 h-1 rounded-full bg-white/20 mx-auto group-hover:bg-white/40 transition-colors" />
+        </div>
+      </div>
+
       {/* 1. Glassmorphic Sidebar */}
       <div className="w-20 lg:w-64 border-r border-white/5 bg-white/[0.01] flex flex-col justify-between backdrop-blur-3xl relative z-20">
         <div>
@@ -405,16 +448,63 @@ export default function Dashboard() {
           {/* --- PORTFOLIO TAB MOCKUP --- */}
           {activeTab === 'portfolio' && (
             <div className="animate-fade-in max-w-4xl mx-auto">
-              <div className="mb-8 flex items-center justify-between p-8 rounded-3xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10">
-                <div>
+              <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between p-8 rounded-3xl bg-gradient-to-br from-white/[0.05] to-transparent border border-white/10 relative overflow-hidden">
+                <div className="relative z-10">
                   <div className="text-white/40 text-sm font-medium mb-1">Total Invested Value</div>
-                  <div className="text-4xl font-bold font-mono tracking-tight text-white mb-2">₹4,23,500.00</div>
-                  <div className="text-[#00D09C] font-mono font-medium flex items-center gap-2">
-                    <span>+₹45,210.50 (+11.9%)</span>
+                  <div className="text-4xl font-bold font-mono tracking-tight text-white mb-2">
+                    {stressTestActive ? (
+                      <span className="text-red-500 animate-pulse">₹3,81,150.00</span>
+                    ) : (
+                      '₹4,23,500.00'
+                    )}
+                  </div>
+                  <div className={`font-mono font-medium flex items-center gap-2 ${stressTestActive ? 'text-red-500' : 'text-[#00D09C]'}`}>
+                    <span>{stressTestActive ? '-₹42,350.00 (-10.0%)' : '+₹45,210.50 (+11.9%)'}</span>
                     <span className="text-white/30 text-xs font-sans bg-white/10 px-2 py-0.5 rounded-full">All Time</span>
                   </div>
                 </div>
-                <div className="w-32 h-32 rounded-full border-[12px] border-groww-green/20 border-t-groww-green border-r-groww-green shadow-[0_0_30px_rgba(0,208,156,0.2)]" />
+                
+                <div className="relative z-10 mt-6 md:mt-0">
+                  <button 
+                    onClick={() => {
+                      setStressTestActive(true);
+                      setStressProgress(0);
+                      const interval = setInterval(() => {
+                        setStressProgress(p => {
+                          if (p >= 100) { clearInterval(interval); return 100; }
+                          return p + 5;
+                        });
+                      }, 50);
+                      setTimeout(() => setStressTestActive(false), 8000); // auto reset
+                    }}
+                    disabled={stressTestActive}
+                    className={`px-6 py-3 rounded-xl font-bold text-sm flex items-center gap-2 transition-all ${
+                      stressTestActive 
+                        ? 'bg-red-500/20 text-red-400 border border-red-500/50 cursor-not-allowed'
+                        : 'bg-white/10 hover:bg-white/20 text-white border border-white/20 shadow-lg shadow-black/50'
+                    }`}
+                  >
+                    {stressTestActive ? (
+                      <>
+                        <span className="animate-spin text-lg">⚙️</span>
+                        <span>Running Stress Test {stressProgress}%</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-lg">📉</span>
+                        <span>Run Market Crash Test (-10%)</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+                
+                {/* Background radar effect for stress test */}
+                {stressTestActive && (
+                  <div className="absolute inset-0 z-0 flex items-center justify-center opacity-30">
+                    <div className="w-[800px] h-[800px] rounded-full border border-red-500 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite]" />
+                    <div className="absolute w-[600px] h-[600px] rounded-full border border-red-500 animate-[ping_2s_cubic-bezier(0,0,0.2,1)_infinite_0.5s]" />
+                  </div>
+                )}
               </div>
 
               <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
@@ -432,30 +522,45 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
-                    {mockPortfolio.map((item, i) => (
-                      <tr key={i} className="hover:bg-white/[0.02] transition-colors group">
-                        <td className="px-6 py-4 font-bold text-white">{item.sym}</td>
-                        <td className="px-6 py-4 text-right font-mono">
-                          <div className="text-white">{item.qty}</div>
-                        </td>
-                        <td className="px-6 py-4 text-right font-mono">
-                          <div className="text-white/50 text-xs mb-1">₹{item.avg.toFixed(2)}</div>
-                          <div className="text-white font-medium">₹{item.ltp.toFixed(2)}</div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {item.tier === 'quiet' ? (
-                            <span className="text-white/30 text-xs italic flex items-center gap-1">
-                              <span className="w-1.5 h-1.5 rounded-full bg-white/10" /> Monitoring...
-                            </span>
-                          ) : (
-                            <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-2 max-w-xs animate-pulse-soft">
-                              <div className="mb-1"><ChangeBadge tier={item.tier} /></div>
-                              <div className="text-xs text-orange-200/70 leading-snug">{item.desc}</div>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
+                    {mockPortfolio.map((item, i) => {
+                      const beta = item.sym === 'RELIANCE' ? 1.2 : (item.sym === 'ZOMATO' ? 1.8 : 0.85);
+                      const projectedDrop = 10 * beta;
+                      const currentValue = item.qty * item.ltp;
+                      const loss = currentValue * (projectedDrop / 100);
+
+                      return (
+                        <tr key={i} className={`transition-colors group ${stressTestActive && beta > 1 ? 'bg-red-500/5' : 'hover:bg-white/[0.02]'}`}>
+                          <td className="px-6 py-4 font-bold text-white flex items-center gap-2">
+                            {item.sym}
+                            {stressTestActive && beta > 1 && <span className="text-[10px] bg-red-500/20 text-red-400 px-2 py-0.5 rounded border border-red-500/30 uppercase">High Risk Beta</span>}
+                          </td>
+                          <td className="px-6 py-4 text-right font-mono">
+                            <div className="text-white">{item.qty}</div>
+                          </td>
+                          <td className="px-6 py-4 text-right font-mono">
+                            <div className="text-white/50 text-xs mb-1">₹{item.avg.toFixed(2)}</div>
+                            <div className="text-white font-medium">₹{item.ltp.toFixed(2)}</div>
+                          </td>
+                          <td className="px-6 py-4">
+                            {stressTestActive ? (
+                              <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 max-w-xs animate-pulse-soft">
+                                <div className="text-xs font-bold text-red-400 mb-1">PROJECTED CRASH LOSS</div>
+                                <div className="text-sm font-mono text-red-200">-₹{loss.toFixed(2)} (-{projectedDrop.toFixed(1)}%)</div>
+                              </div>
+                            ) : item.tier === 'quiet' ? (
+                              <span className="text-white/30 text-xs italic flex items-center gap-1">
+                                <span className="w-1.5 h-1.5 rounded-full bg-white/10" /> Monitoring...
+                              </span>
+                            ) : (
+                              <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-2 max-w-xs animate-pulse-soft">
+                                <div className="mb-1"><ChangeBadge tier={item.tier} /></div>
+                                <div className="text-xs text-orange-200/70 leading-snug">{item.desc}</div>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
