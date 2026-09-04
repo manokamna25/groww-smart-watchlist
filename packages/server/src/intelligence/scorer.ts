@@ -6,6 +6,7 @@ export interface ScoredResult {
   signals: ChangeSignals;
   pricePctChange: number;
   indexPctChange: number;
+  confidence: 'high' | 'medium' | 'low';
 }
 
 export interface TickInput {
@@ -109,11 +110,34 @@ export function scoreTick(
     gap,
   };
 
+  // Calculate confidence
+  let confidence: 'high' | 'medium' | 'low' = 'medium';
+  if (tier !== 'quiet') {
+    let prevZ = 0;
+    if (prices.length >= 2) {
+      const prevPrices = prices.slice(0, -1);
+      const prevMean = calculateMean(prevPrices);
+      const prevStd = calculateStdDev(prevPrices, prevMean);
+      prevZ = (prices[prices.length - 1] - prevMean) / prevStd;
+    }
+    
+    const isConfirmed = Math.abs(prevZ) > 1.5;
+    const isStrongSignal = score >= 2.5;
+    const isBoundary = score < 2.2;
+
+    if (isConfirmed && isStrongSignal) {
+      confidence = 'high';
+    } else if (!isConfirmed && isBoundary) {
+      confidence = 'low';
+    }
+  }
+
   return {
     tier,
     score,
     signals,
     pricePctChange,
     indexPctChange,
+    confidence,
   };
 }

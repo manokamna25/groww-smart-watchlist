@@ -14,8 +14,8 @@ devRouter.post('/inject-event', (req, res) => {
     return res.status(400).json({ error: 'symbol and type (spike | gap | volume_anomaly) are required.' });
   }
 
-  if (!['spike', 'gap', 'volume_anomaly'].includes(type)) {
-    return res.status(400).json({ error: 'Invalid event type. Must be spike, gap, or volume_anomaly.' });
+  if (!['spike', 'spike_up', 'spike_down', 'gap', 'volume_anomaly'].includes(type)) {
+    return res.status(400).json({ error: 'Invalid event type. Must be spike, spike_up, spike_down, gap, or volume_anomaly.' });
   }
 
   try {

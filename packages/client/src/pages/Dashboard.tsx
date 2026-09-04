@@ -1,9 +1,31 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../hooks/api';
 import { useWatchlistSocket } from '../hooks/useWatchlistSocket';
 import { useAuthStore } from '../store/auth.store';
-import { ChangeBadge, NarrativeCard, ShowMathPanel } from '../components/intelligence/IntelligenceComponents';
+import { ChangeBadge, NarrativeCard, ShowMathPanel, AiExplainerChat } from '../components/intelligence/IntelligenceComponents';
+import { LiveChart } from '../components/trading/LiveChart';
+import { OptionsChain } from '../components/intelligence/OptionsChain';
+import { OrderTicketModal } from '../components/trading/OrderTicketModal';
+import { CommandPalette } from '../components/ui/CommandPalette';
+import { SebiRiskModal } from '../components/ui/SebiRiskModal';
+
+function LiveTradersBadge({ symbol }: { symbol: string }) {
+  const { data } = useQuery({
+    queryKey: ['sentiment', symbol],
+    queryFn: () => api.market.sentiment(symbol),
+    refetchInterval: 5000,
+  });
+
+  if (!data || data.activeTraders < 10) return null;
+
+  return (
+    <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] font-semibold animate-fade-in shadow-[0_0_10px_rgba(239,68,68,0.2)]">
+      <span className="animate-pulse">🔥</span>
+      {data.activeTraders} watching
+    </div>
+  );
+}
 
 function PremiumSparkline({ isPositive }: { isPositive: boolean }) {
   const color = isPositive ? '#00D09C' : '#EF4444';
@@ -32,24 +54,38 @@ function PremiumSparkline({ isPositive }: { isPositive: boolean }) {
 }
 
 export default function Dashboard() {
+  const { logout, sensitivity, setSensitivity } = useAuthStore();
   const queryClient = useQueryClient();
-  const logout = useAuthStore((s) => s.logout);
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'intelligence' | 'portfolio'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'intelligence' | 'portfolio' | 'derivatives'>('dashboard');
+  
+  const [optionsData, setOptionsData] = useState<Record<string, any>>({});
 
   const [selectedWatchlistId] = useState<string | null>(null);
   const [addSymbol, setAddSymbol] = useState('');
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
+  const [aiExplainingSymbol, setAiExplainingSymbol] = useState<string | null>(null);
   const [showMathEventId, setShowMathEventId] = useState<string | null>(null);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [hasAcceptedRisk, setHasAcceptedRisk] = useState(false);
+  const [showRiskModal, setShowRiskModal] = useState(false);
   const [livePrices, setLivePrices] = useState<Record<string, { price: number; ts: string; prevPrice?: number }>>({});
   const [liveEvents, setLiveEvents] = useState<any[]>([]);
+  const [voiceEnabled, setVoiceEnabled] = useState(false);
   
   const [devInjectSymbol, setDevInjectSymbol] = useState('RELIANCE');
   const [devInjectType, setDevInjectType] = useState('spike');
 
-  // Elite Features State
   const [pushNotification, setPushNotification] = useState<any>(null);
   const [stressTestActive, setStressTestActive] = useState(false);
   const [stressProgress, setStressProgress] = useState(100);
+
+  // Trading Modal State
+  const [tradeModal, setTradeModal] = useState<{ isOpen: boolean; symbol: string; action: 'BUY' | 'SELL'; price: number; eventTier?: string }>({
+    isOpen: false,
+    symbol: '',
+    action: 'BUY',
+    price: 0
+  });
 
   // Queries
   const { data: watchlists, isLoading } = useQuery({
@@ -60,8 +96,8 @@ export default function Dashboard() {
   const activeWatchlistId = selectedWatchlistId || watchlists?.[0]?.id;
 
   const { data: summary, refetch: refetchSummary } = useQuery({
-    queryKey: ['watchlist-summary', activeWatchlistId],
-    queryFn: () => api.watchlists.summary(activeWatchlistId!),
+    queryKey: ['watchlist-summary', activeWatchlistId, sensitivity],
+    queryFn: () => api.watchlists.summary(activeWatchlistId!, sensitivity),
     enabled: !!activeWatchlistId,
     refetchInterval: 10000,
   });
@@ -114,17 +150,50 @@ export default function Dashboard() {
   }, []);
 
   const handleChangeEvent = useCallback((data: any) => {
+    // Filter based on user sensitivity preference
+    if (sensitivity === 'conservative' && data.tier !== 'critical') return;
+    if (sensitivity === 'balanced' && data.tier === 'notable') return;
+
     setLiveEvents((prev) => [data, ...prev.slice(0, 19)]);
     refetchSummary();
     
-    // Trigger Push Notification for critical/meaningful events
-    if (data.tier === 'critical' || data.tier === 'meaningful') {
+    // Trigger Push Notification based on sensitivity
+    const shouldPush = 
+      data.tier === 'critical' || 
+      (sensitivity === 'aggressive' && data.tier === 'meaningful');
+
+    if (shouldPush) {
       setPushNotification(data);
       setTimeout(() => setPushNotification(null), 6000);
+
+      // AI Voice Alert
+      if (voiceEnabled && 'speechSynthesis' in window) {
+        const text = `${data.tier === 'critical' ? 'Critical' : 'Meaningful'} anomaly detected on ${data.symbol}. ${data.narrative}`;
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 1.1; // Slightly faster for a professional feel
+        utterance.pitch = 0.9; 
+        window.speechSynthesis.speak(utterance);
+      }
     }
+  }, [sensitivity, voiceEnabled]);
+
+  const handleOptionsTick = useCallback((data: any) => {
+    setOptionsData(prev => ({ ...prev, [data.symbol]: data }));
   }, []);
 
-  useWatchlistSocket(symbols, handleTick, handleChangeEvent);
+  useWatchlistSocket(symbols, handleTick, handleChangeEvent, handleOptionsTick);
+
+  // Cmd+K Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (isLoading) {
     return (
@@ -148,12 +217,36 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#030305] text-white flex overflow-hidden font-sans selection:bg-groww-green/30 relative">
+    <div className="min-h-screen bg-[#030305] text-white flex flex-col md:flex-row overflow-hidden font-sans selection:bg-groww-green/30 relative">
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        symbols={symbols}
+        onAction={(action, payload) => {
+          if (action === 'TAB_DASHBOARD') setActiveTab('dashboard');
+          if (action === 'TAB_INTEL') setActiveTab('intelligence');
+          if (action === 'TOGGLE_VOICE') setVoiceEnabled(!voiceEnabled);
+          if (action === 'BUY' || action === 'SELL') {
+            const price = livePrices[payload]?.price || 0;
+            setTradeModal({ isOpen: true, symbol: payload, action, price });
+          }
+        }}
+      />
       
+      <SebiRiskModal 
+        isOpen={showRiskModal} 
+        onAccept={() => {
+          setHasAcceptedRisk(true);
+          setShowRiskModal(false);
+          setActiveTab('derivatives');
+        }} 
+        onDecline={() => setShowRiskModal(false)} 
+      />
+
       {/* --- ELITE FEATURE: iOS PUSH NOTIFICATION --- */}
       <div 
-        className={`absolute top-6 left-1/2 -translate-x-1/2 z-[100] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
-          pushNotification ? 'translate-y-0 opacity-100 scale-100' : '-translate-y-24 opacity-0 scale-95 pointer-events-none'
+        className={`absolute bottom-8 right-[400px] z-[100] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] ${
+          pushNotification ? 'translate-y-0 opacity-100 scale-100' : 'translate-y-24 opacity-0 scale-95 pointer-events-none'
         }`}
       >
         <div 
@@ -183,48 +276,63 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 1. Glassmorphic Sidebar */}
-      <div className="w-20 lg:w-64 border-r border-white/5 bg-white/[0.01] flex flex-col justify-between backdrop-blur-3xl relative z-20">
-        <div>
-          <div className="h-20 flex items-center justify-center lg:justify-start lg:px-8 border-b border-white/5">
+      {/* 1. Glassmorphic Sidebar / Bottom Nav */}
+      <div className="order-last md:order-first w-full md:w-20 lg:w-64 border-t md:border-t-0 md:border-r border-white/5 bg-[#030305] md:bg-white/[0.01] flex md:flex-col justify-between backdrop-blur-3xl relative z-50">
+        <div className="flex md:flex-col w-full md:w-auto overflow-hidden">
+          <div className="hidden md:flex h-20 items-center justify-center lg:justify-start lg:px-8 border-b border-white/5">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-groww-green to-blue-500 flex items-center justify-center shadow-[0_0_20px_rgba(0,208,156,0.3)]">
               <span className="text-white font-black text-xl">W</span>
             </div>
             <span className="hidden lg:block ml-3 font-bold text-lg tracking-wide text-white">SMART<span className="text-groww-green">WATCH</span></span>
           </div>
           
-          <nav className="mt-8 px-4 space-y-2">
+          <nav className="flex md:flex-col md:mt-8 px-2 md:px-4 md:space-y-2 w-full justify-around py-3 md:py-0">
             <div 
               onClick={() => setActiveTab('dashboard')}
-              className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'dashboard' ? 'bg-white/5 text-white border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'text-white/50 hover:text-white hover:bg-white/5'
+              className={`flex flex-col md:flex-row items-center gap-1 md:gap-4 px-3 md:px-4 py-2 md:py-3 rounded-xl transition-all cursor-pointer ${
+                activeTab === 'dashboard' ? 'bg-white/5 text-white border border-white/10 md:shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'text-white/50 hover:text-white hover:bg-white/5'
               }`}
             >
-              <span className="text-lg">📊</span>
-              <span className="hidden lg:block font-medium text-sm">Dashboard</span>
+              <span className="text-xl md:text-lg">📊</span>
+              <span className="text-[10px] md:text-sm font-medium lg:block">Dash</span>
             </div>
             <div 
               onClick={() => setActiveTab('intelligence')}
-              className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'intelligence' ? 'bg-white/5 text-white border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'text-white/50 hover:text-white hover:bg-white/5'
+              className={`flex flex-col md:flex-row items-center gap-1 md:gap-4 px-3 md:px-4 py-2 md:py-3 rounded-xl transition-all cursor-pointer ${
+                activeTab === 'intelligence' ? 'bg-white/5 text-white border border-white/10 md:shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'text-white/50 hover:text-white hover:bg-white/5'
               }`}
             >
-              <span className="text-lg">⚡</span>
-              <span className="hidden lg:block font-medium text-sm">Intelligence</span>
+              <span className="text-xl md:text-lg">⚡</span>
+              <span className="text-[10px] md:text-sm font-medium lg:block">Intel</span>
             </div>
             <div 
               onClick={() => setActiveTab('portfolio')}
-              className={`flex items-center gap-4 px-4 py-3 rounded-xl transition-all cursor-pointer ${
-                activeTab === 'portfolio' ? 'bg-white/5 text-white border border-white/10 shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'text-white/50 hover:text-white hover:bg-white/5'
+              className={`flex flex-col md:flex-row items-center gap-1 md:gap-4 px-3 md:px-4 py-2 md:py-3 rounded-xl transition-all cursor-pointer ${
+                activeTab === 'portfolio' ? 'bg-white/5 text-white border border-white/10 md:shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'text-white/50 hover:text-white hover:bg-white/5'
               }`}
             >
-              <span className="text-lg">💼</span>
-              <span className="hidden lg:block font-medium text-sm">Portfolio</span>
+              <span className="text-xl md:text-lg">💼</span>
+              <span className="text-[10px] md:text-sm font-medium lg:block">Port</span>
+            </div>
+            <div 
+              onClick={() => {
+                if (!hasAcceptedRisk) {
+                  setShowRiskModal(true);
+                } else {
+                  setActiveTab('derivatives');
+                }
+              }}
+              className={`flex flex-col md:flex-row items-center gap-1 md:gap-4 px-3 md:px-4 py-2 md:py-3 rounded-xl transition-all cursor-pointer ${
+                activeTab === 'derivatives' ? 'bg-white/5 text-white border border-white/10 md:shadow-[0_0_15px_rgba(255,255,255,0.05)]' : 'text-white/50 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <span className="text-xl md:text-lg">🔥</span>
+              <span className="text-[10px] md:text-sm font-medium lg:block">F&O</span>
             </div>
           </nav>
         </div>
 
-        <div className="p-4 border-t border-white/5">
+        <div className="hidden md:block p-4 border-t border-white/5">
           <button onClick={logout} className="flex items-center gap-4 px-4 py-3 w-full text-white/50 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all cursor-pointer">
             <span className="text-lg">🚪</span>
             <span className="hidden lg:block font-medium text-sm">Sign Out</span>
@@ -240,18 +348,112 @@ export default function Dashboard() {
         <div className="absolute bottom-[-20%] right-[20%] w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* Top Header */}
-        <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-black/20 backdrop-blur-md z-20">
-          <div className="flex items-center gap-4">
+        <header className="h-20 border-b border-white/5 flex items-center justify-between px-4 lg:px-8 bg-black/20 backdrop-blur-md z-20">
+          <div className="flex items-center gap-2 lg:gap-4">
             <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
               {activeTab === 'dashboard' && 'Market Overview'}
               {activeTab === 'intelligence' && 'Global AI Screener'}
               {activeTab === 'portfolio' && 'Smart Holdings'}
+              {activeTab === 'derivatives' && 'Derivatives Pricing'}
             </h1>
             {activeTab === 'dashboard' && (
-              <span className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">
-                {symbols.length} Assets Tracking
+              <span className="hidden md:inline-block px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-mono text-white/50">
+                {symbols.length} Assets Tracked
               </span>
             )}
+            {activeTab === 'intelligence' && (
+              <span className="hidden md:inline-block px-3 py-1 rounded-full bg-groww-green/10 text-groww-green border border-groww-green/20 text-xs font-mono">
+                Live Z-Score Scanning
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 lg:gap-4">
+            <button
+              onClick={() => setIsCommandPaletteOpen(true)}
+              className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors mr-2"
+            >
+              <span className="text-sm">🔍</span>
+              <span className="text-xs font-medium tracking-wide">Search</span>
+              <span className="ml-4 text-[10px] font-mono bg-white/10 px-1.5 py-0.5 rounded border border-white/5">⌘K</span>
+            </button>
+            
+            {/* Voice Toggle */}
+            <button
+              onClick={() => {
+                if (!voiceEnabled && 'speechSynthesis' in window) {
+                  // Speak a confirmation to unlock audio context and prove it works
+                  const u = new SpeechSynthesisUtterance('Voice alerts enabled');
+                  u.rate = 1.1;
+                  u.pitch = 0.9;
+                  window.speechSynthesis.speak(u);
+                } else if (voiceEnabled && 'speechSynthesis' in window) {
+                  // Instantly stop any ongoing speech if muting
+                  window.speechSynthesis.cancel();
+                }
+                setVoiceEnabled(!voiceEnabled);
+              }}
+              className={`p-2 rounded-xl transition-all border ${
+                voiceEnabled 
+                  ? 'bg-groww-green/20 text-groww-green border-groww-green/50 shadow-[0_0_15px_rgba(0,208,156,0.3)]' 
+                  : 'bg-white/5 text-white/40 hover:text-white border-white/10'
+              }`}
+              title={voiceEnabled ? "Voice Alerts ON" : "Voice Alerts OFF"}
+            >
+              {voiceEnabled ? '🔊' : '🔇'}
+            </button>
+
+            {activeTab === 'dashboard' && (
+              <div className="flex items-center gap-2 lg:gap-6">
+                
+                {/* Alert Sensitivity Toggle */}
+                <div className="hidden 2xl:flex items-center bg-black/40 border border-white/10 rounded-xl p-1 backdrop-blur-md">
+                  <button 
+                    onClick={() => setSensitivity('conservative')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sensitivity === 'conservative' ? 'bg-groww-green text-black shadow-[0_0_10px_rgba(0,208,156,0.3)]' : 'text-white/40 hover:text-white/80'}`}
+                  >
+                    Conservative
+                  </button>
+                  <button 
+                    onClick={() => setSensitivity('balanced')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sensitivity === 'balanced' ? 'bg-groww-green text-black shadow-[0_0_10px_rgba(0,208,156,0.3)]' : 'text-white/40 hover:text-white/80'}`}
+                  >
+                    Balanced
+                  </button>
+                  <button 
+                    onClick={() => setSensitivity('aggressive')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${sensitivity === 'aggressive' ? 'bg-groww-green text-black shadow-[0_0_10px_rgba(0,208,156,0.3)]' : 'text-white/40 hover:text-white/80'}`}
+                  >
+                    Aggressive
+                  </button>
+                </div>
+
+                <div className="relative group flex items-center">
+                  <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-groww-green transition-colors z-10 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  </div>
+                  <input
+                    value={addSymbol}
+                    onChange={(e) => setAddSymbol(e.target.value.toUpperCase())}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && addSymbol) {
+                        addItemMutation.mutate(addSymbol);
+                      }
+                    }}
+                    className="w-32 md:w-48 lg:w-72 bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 backdrop-blur-md rounded-full pl-11 pr-12 lg:pr-20 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:border-groww-green focus:bg-white/[0.05] focus:shadow-[0_0_20px_rgba(0,208,156,0.15)] transition-all"
+                    placeholder="Track symbol..."
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center transition-opacity pointer-events-none hidden lg:flex">
+                    {addSymbol ? (
+                      <span className="text-[9px] font-bold bg-groww-green text-black px-2 py-1 rounded-md border border-groww-green shadow-[0_0_10px_rgba(0,208,156,0.3)] uppercase tracking-widest">ENTER ↵</span>
+                    ) : (
+                      <span className="text-[10px] font-bold bg-white/[0.05] text-white/70 px-2 py-1 rounded-md border border-white/10 uppercase tracking-widest group-focus-within:opacity-0 transition-opacity shadow-sm">⌘ K</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            
             {activeTab === 'intelligence' && (
               <span className="px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/20 text-xs font-mono text-orange-400 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"/> Scanning 2,412 NSE Equities
@@ -259,33 +461,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          {activeTab === 'dashboard' && (
-            <div className="flex items-center gap-4">
-              <div className="relative group flex items-center">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-groww-green transition-colors z-10 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                </div>
-                <input
-                  value={addSymbol}
-                  onChange={(e) => setAddSymbol(e.target.value.toUpperCase())}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && addSymbol) {
-                      addItemMutation.mutate(addSymbol);
-                    }
-                  }}
-                  className="w-72 bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 backdrop-blur-md rounded-full pl-11 pr-20 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:border-groww-green focus:bg-white/[0.05] focus:shadow-[0_0_20px_rgba(0,208,156,0.15)] transition-all"
-                  placeholder="Track symbol (e.g. RELIANCE)"
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center transition-opacity pointer-events-none">
-                  {addSymbol ? (
-                    <span className="text-[9px] font-bold bg-groww-green text-black px-2 py-1 rounded-md border border-groww-green shadow-[0_0_10px_rgba(0,208,156,0.3)] uppercase tracking-widest">ENTER ↵</span>
-                  ) : (
-                    <span className="text-[10px] font-bold bg-white/[0.05] text-white/70 px-2 py-1 rounded-md border border-white/10 uppercase tracking-widest group-focus-within:opacity-0 transition-opacity shadow-sm">⌘ K</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Removed duplicate activeTab === 'dashboard' block */}
         </header>
 
         {/* Dynamic Watchlist Grid */}
@@ -293,7 +469,19 @@ export default function Dashboard() {
           
           {/* --- DASHBOARD TAB --- */}
           {activeTab === 'dashboard' && (
-            <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6 items-start">
+            <>
+              {summary?.globalSummary && (
+                <div className="mb-6 p-4 rounded-xl bg-gradient-to-r from-groww-green/20 to-transparent border border-groww-green/30 animate-fade-in shadow-[0_0_20px_rgba(0,208,156,0.1)]">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl">✨</span>
+                    <div>
+                      <h3 className="text-sm font-bold text-white/90 mb-1 tracking-wide uppercase">Smart AI Digest</h3>
+                      <p className="text-sm text-groww-green/90 font-medium">{summary.globalSummary}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-6 items-start">
               {summary?.watchlist?.items?.map((item: any) => {
                 const digest = summary.digest?.find((d: any) => d.symbol === item.symbol);
                 const live = livePrices[item.symbol];
@@ -328,7 +516,8 @@ export default function Dashboard() {
                   >
                     <button 
                       onClick={(e) => { e.stopPropagation(); removeItemMutation.mutate(item.symbol); }}
-                      className="absolute top-4 right-4 w-6 h-6 rounded-full bg-white/5 flex items-center justify-center text-white/30 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 transition-all z-10"
+                      className="absolute top-4 right-4 w-7 h-7 rounded-full bg-white/10 flex items-center justify-center text-white/60 hover:bg-red-500/20 hover:text-red-400 hover:opacity-100 transition-all z-20"
+                      title="Remove from Watchlist"
                     >
                       ✕
                     </button>
@@ -336,7 +525,10 @@ export default function Dashboard() {
                     <div className="p-6 pb-2 cursor-pointer relative z-10" onClick={() => setExpandedSymbol(isExpanded ? null : item.symbol)}>
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <h2 className="text-2xl font-bold tracking-tight text-white">{item.symbol}</h2>
+                          <div className="flex items-center gap-3">
+                            <h2 className="text-2xl font-bold tracking-tight text-white">{item.symbol}</h2>
+                            <LiveTradersBadge symbol={item.symbol} />
+                          </div>
                           <span className="text-xs font-mono text-white/40 uppercase tracking-wider">NSE EQUITIES</span>
                         </div>
                         <div className="text-right">
@@ -362,34 +554,80 @@ export default function Dashboard() {
                       </div>
                     </div>
 
-                    {isExpanded && digest && (
+                    {isExpanded && (
                       <div className="border-t border-white/10 bg-black/40 backdrop-blur-md p-5 space-y-4 animate-slide-up relative z-10">
-                        {digest.events?.length > 0 ? (
+                        {/* 🌟 Top 20 Feature: Live Candlestick Chart */}
+                        <div className="h-48 mb-4 border border-white/5 rounded-xl overflow-hidden bg-black/50">
+                          <LiveChart 
+                            symbol={item.symbol} 
+                            currentPrice={digest?.lastViewedPrice || price} 
+                            livePrice={live?.price}
+                            liveTime={live ? new Date(live.ts).getTime() : undefined}
+                            events={digest?.events || []}
+                          />
+                        </div>
+
+                        {digest?.events && digest.events.length > 0 ? (
                           <>
                             <div className="flex items-center justify-between mb-2">
                               <span className="text-xs font-semibold text-white/40 uppercase tracking-widest">Intelligence Report</span>
-                              <button
-                                onClick={() => ackItemMutation.mutate(item.symbol)}
-                                className="text-xs text-groww-green hover:text-white transition-colors"
-                              >
-                                Mark as read
-                              </button>
+                              <div className="flex items-center gap-3">
+                                {aiExplainingSymbol !== item.symbol && (
+                                  <button
+                                    onClick={() => setAiExplainingSymbol(item.symbol)}
+                                    className="text-xs text-groww-purple hover:text-white transition-colors flex items-center gap-1 font-medium bg-groww-purple/10 px-2 py-1 rounded-full border border-groww-purple/20"
+                                  >
+                                    <span>✨</span> Explain with AI
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => ackItemMutation.mutate(item.symbol)}
+                                  className="text-xs text-groww-green hover:text-white transition-colors"
+                                >
+                                  Mark as read
+                                </button>
+                              </div>
                             </div>
-                            <div className="space-y-3">
-                              {digest.events.slice(0, 3).map((event: any) => (
-                                <div key={event.id} className="relative">
-                                  <NarrativeCard
-                                    event={event}
-                                    onShowMath={(id) => setShowMathEventId(showMathEventId === id ? null : id)}
-                                    onAck={(id) => ackEventMutation.mutate(id)}
-                                  />
-                                  {showMathEventId === event.id && mathBreakdown && (
-                                    <div className="mt-2 ml-4 pl-4 border-l-2 border-white/10">
-                                      <ShowMathPanel signals={mathBreakdown.signals} score={mathBreakdown.score} tier={mathBreakdown.tier} />
-                                    </div>
-                                  )}
-                                </div>
-                              ))}
+                            
+                            {aiExplainingSymbol === item.symbol ? (
+                              <AiExplainerChat 
+                                symbol={item.symbol} 
+                                event={digest.events[0]} 
+                                onClose={() => setAiExplainingSymbol(null)} 
+                              />
+                            ) : (
+                              <div className="space-y-3">
+                                {digest.events.slice(0, 3).map((event: any) => (
+                                  <div key={event.id} className="relative">
+                                    <NarrativeCard
+                                      event={event}
+                                      onShowMath={(id) => setShowMathEventId(showMathEventId === id ? null : id)}
+                                      onAck={(id) => ackEventMutation.mutate(id)}
+                                    />
+                                    {showMathEventId === event.id && mathBreakdown && (
+                                      <div className="mt-2 ml-4 pl-4 border-l-2 border-white/10">
+                                        <ShowMathPanel signals={mathBreakdown.signals} score={mathBreakdown.score} tier={mathBreakdown.tier} confidence={mathBreakdown.confidence} />
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            
+                            {/* Smart Execute Trade Button */}
+                            <div className="mt-4 pt-4 border-t border-white/5 flex gap-3">
+                              <button
+                                onClick={() => setTradeModal({ isOpen: true, symbol: item.symbol, action: 'BUY', price, eventTier: digest.events?.[0]?.tier })}
+                                className="flex-1 py-2.5 rounded-lg bg-[#00D09C]/10 hover:bg-[#00D09C]/20 border border-[#00D09C]/30 text-[#00D09C] font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                              >
+                                <span>🛒</span> Smart Buy {item.symbol}
+                              </button>
+                              <button
+                                onClick={() => setTradeModal({ isOpen: true, symbol: item.symbol, action: 'SELL', price, eventTier: digest.events?.[0]?.tier })}
+                                className="flex-1 py-2.5 rounded-lg bg-[#EF4444]/10 hover:bg-[#EF4444]/20 border border-[#EF4444]/30 text-[#EF4444] font-bold text-sm transition-colors flex items-center justify-center gap-2"
+                              >
+                                <span>📉</span> Smart Sell
+                              </button>
                             </div>
                           </>
                         ) : (
@@ -411,6 +649,7 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
+            </>
           )}
 
           {/* --- INTELLIGENCE TAB MOCKUP --- */}
@@ -566,11 +805,35 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* --- DERIVATIVES TAB --- */}
+          {activeTab === 'derivatives' && (
+            <div className="animate-fade-in max-w-5xl mx-auto space-y-6">
+              <div className="mb-4">
+                <h2 className="text-xl font-bold text-white mb-2">Options Smart Chain</h2>
+                <p className="text-white/60 text-sm">Real-time theoretical premiums calculated via Black-Scholes-Merton model over WebSockets.</p>
+              </div>
+              
+              <div className="space-y-8">
+                {symbols.length > 0 ? (
+                  symbols.map(sym => (
+                    <OptionsChain key={sym} optionsData={optionsData[sym]} />
+                  ))
+                ) : (
+                  <div className="text-center p-12 bg-white/[0.02] rounded-2xl border border-white/5">
+                    <span className="text-4xl mb-4 block">🔍</span>
+                    <p className="text-white/50">Add a stock to your watchlist to view its options chain.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
         </main>
       </div>
 
       {/* 3. Global Intelligence Feed (Right Sidebar) */}
-      <div className="w-[380px] border-l border-white/5 bg-[#050505]/80 backdrop-blur-2xl flex flex-col h-screen z-20">
+      <div className="hidden xl:flex w-[380px] border-l border-white/5 bg-[#050505]/80 backdrop-blur-2xl flex-col h-screen z-20">
         
         <div className="h-20 border-b border-white/5 flex items-center px-6">
           <div className="flex items-center gap-3">
@@ -619,7 +882,9 @@ export default function Dashboard() {
                 onChange={(e) => setDevInjectType(e.target.value)}
                 className="w-1/2 bg-black/50 border border-white/10 rounded-lg px-2 py-2 text-xs text-white focus:outline-none focus:border-groww-green/50"
               >
-                <option value="spike">Spike (+5.5%)</option>
+                <option value="spike">Spike (Random)</option>
+                <option value="spike_up">Spike UP (+5.5%)</option>
+                <option value="spike_down">Drop DOWN (-5.5%)</option>
                 <option value="gap">Gap (±4%)</option>
                 <option value="volume_anomaly">Vol (5x)</option>
               </select>
@@ -635,6 +900,15 @@ export default function Dashboard() {
         </div>
 
       </div>
+
+      {tradeModal.isOpen && (
+        <OrderTicketModal
+          symbol={tradeModal.symbol}
+          action={tradeModal.action}
+          price={tradeModal.price}
+          onClose={() => setTradeModal({ ...tradeModal, isOpen: false })}
+        />
+      )}
 
     </div>
   );

@@ -35,7 +35,8 @@ watchlistRouter.post('/', async (req: AuthenticatedRequest, res, next) => {
 
 watchlistRouter.get('/:id/summary', async (req: AuthenticatedRequest, res, next) => {
   try {
-    const summary = await getWatchlistSummary(req.user!.userId, req.params.id);
+    const sensitivity = (req.query.sensitivity as string) || 'balanced';
+    const summary = await getWatchlistSummary(req.user!.userId, req.params.id, sensitivity);
     res.json(summary);
   } catch (err) {
     next(err);

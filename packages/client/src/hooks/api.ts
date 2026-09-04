@@ -37,7 +37,8 @@ export const api = {
   watchlists: {
     list: () => request<any[]>('/watchlists'),
     create: (name: string) => request<any>('/watchlists', { method: 'POST', body: JSON.stringify({ name }) }),
-    summary: (id: string) => request<any>(`/watchlists/${id}/summary`),
+    summary: (id: string, sensitivity?: string) => 
+      request<any>(`/watchlists/${id}/summary${sensitivity ? `?sensitivity=${sensitivity}` : ''}`),
     addItem: (id: string, symbol: string) =>
       request<any>(`/watchlists/${id}/items`, { method: 'POST', body: JSON.stringify({ symbol }) }),
     removeItem: (id: string, symbol: string) =>
@@ -46,6 +47,7 @@ export const api = {
       request<any>(`/watchlists/${id}/items/${symbol}/ack`, { method: 'POST' }),
   },
   intelligence: {
+    sync: (afterTs: string) => request<any[]>(`/intelligence/sync?afterTs=${encodeURIComponent(afterTs)}`),
     breakdown: (eventId: string) => request<any>(`/intelligence/events/${eventId}/breakdown`),
     ack: (eventId: string) => request<any>(`/intelligence/events/${eventId}/ack`, { method: 'POST' }),
   },
@@ -53,4 +55,7 @@ export const api = {
     injectEvent: (symbol: string, type: string) =>
       request<any>('/dev/inject-event', { method: 'POST', body: JSON.stringify({ symbol, type }) }),
   },
+  market: {
+    sentiment: (symbol: string) => request<any>(`/market/sentiment/${symbol}`),
+  }
 };

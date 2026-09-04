@@ -52,6 +52,9 @@ export class SocketGateway {
         if (channel.startsWith('tick:')) {
           const symbol = channel.replace('tick:', '');
           this.io.to(`symbol:${symbol}`).emit('tick', data);
+        } else if (channel.startsWith('options:tick:')) {
+          const symbol = channel.replace('options:tick:', '');
+          this.io.to(`symbol:${symbol}`).emit('options:tick', data);
         } else if (channel.startsWith('event:')) {
           const symbol = channel.replace('event:', '');
           this.io.to(`symbol:${symbol}`).emit('change_event', data);
@@ -89,22 +92,29 @@ export class SocketGateway {
     const current = this.refCountMap.get(symbol) || 0;
     this.refCountMap.set(symbol, current + 1);
 
-    if (current === 0 && redisSub.status === 'ready') {
-      // First subscriber for this symbol -> open Redis channels
-      redisSub.subscribe(`tick:${symbol}`, `event:${symbol}`);
+    if (current === 0) {
+      if (redisSub.status === 'ready') {
+        redisSub.subscribe(`tick:${symbol}`);
+        redisSub.subscribe(`options:tick:${symbol}`);
+        redisSub.subscribe(`event:${symbol}`);
+      }
     }
   }
 
   private decrementRefCount(symbol: string) {
     const current = this.refCountMap.get(symbol) || 0;
-    if (current <= 1) {
-      this.refCountMap.delete(symbol);
-      if (redisSub.status === 'ready') {
-        // Last subscriber disconnected -> close Redis channels
-        redisSub.unsubscribe(`tick:${symbol}`, `event:${symbol}`);
+    if (current > 0) {
+      const next = current - 1;
+      if (next === 0) {
+        this.refCountMap.delete(symbol);
+        if (redisSub.status === 'ready') {
+          redisSub.unsubscribe(`tick:${symbol}`);
+          redisSub.unsubscribe(`options:tick:${symbol}`);
+          redisSub.unsubscribe(`event:${symbol}`);
+        }
+      } else {
+        this.refCountMap.set(symbol, next);
       }
-    } else {
-      this.refCountMap.set(symbol, current - 1);
     }
   }
 

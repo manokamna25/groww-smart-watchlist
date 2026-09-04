@@ -16,6 +16,7 @@ export interface ChangeEventDTO {
   score: number;
   narrative: string;
   signals: ChangeSignals;
+  confidence: 'high' | 'medium' | 'low';
   createdAt: string;
   acknowledged?: boolean;
 }

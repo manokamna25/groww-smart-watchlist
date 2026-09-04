@@ -6,6 +6,7 @@ import { authRouter } from './auth/auth.routes';
 import { watchlistRouter } from './watchlist/watchlist.routes';
 import { intelligenceRouter } from './intelligence/intelligence.routes';
 import { devRouter } from './market/dev.routes';
+import { marketRouter } from './market/market.routes';
 import { errorHandler } from './middleware/errorHandler';
 import { socketGateway } from './ws/gateway';
 import { initRedis } from './config/redis';
@@ -26,6 +27,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/watchlists', watchlistRouter);
 app.use('/api/intelligence', intelligenceRouter);
 app.use('/api/dev', devRouter);
+app.use('/api/market', marketRouter);
 
 // Central error handler
 app.use(errorHandler);

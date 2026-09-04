@@ -71,6 +71,7 @@ model ChangeEvent {
   score                 Float
   narrative             String
   signals               Json
+  confidence            String                 @default("medium")
   createdAt             DateTime               @default(now()) @map("created_at")
   changeAcknowledgments ChangeAcknowledgment[]
 

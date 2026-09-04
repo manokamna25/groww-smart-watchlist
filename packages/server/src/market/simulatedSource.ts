@@ -103,6 +103,12 @@ export class SimulatedMarketDataSource implements MarketDataSource {
       if (pendingInjection === 'spike') {
         priceChangePct = (Math.random() > 0.5 ? 1 : -1) * 0.055; // 5.5% sudden move
         volumeMultiplier = 3.5;
+      } else if (pendingInjection === 'spike_up') {
+        priceChangePct = 0.055; // Force +5.5%
+        volumeMultiplier = 3.5;
+      } else if (pendingInjection === 'spike_down') {
+        priceChangePct = -0.055; // Force -5.5%
+        volumeMultiplier = 3.5;
       } else if (pendingInjection === 'gap') {
         priceChangePct = (Math.random() > 0.5 ? 1 : -1) * 0.040; // 4.0% gap
         volumeMultiplier = 2.0;

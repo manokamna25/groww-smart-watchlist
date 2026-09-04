@@ -161,7 +161,7 @@ export async function ackWatchlistItem(userId: string, watchlistId: string, symb
   return { success: true, symbol: cleanSymbol, lastViewedAt: state.lastViewedAt, lastViewedPrice: state.lastViewedPrice };
 }
 
-export async function getWatchlistSummary(userId: string, watchlistId: string) {
+export async function getWatchlistSummary(userId: string, watchlistId: string, sensitivity: string = 'balanced') {
   const watchlist = await prisma.watchlist.findFirst({
     where: { id: watchlistId, userId },
     include: {
@@ -174,7 +174,59 @@ export async function getWatchlistSummary(userId: string, watchlistId: string) {
   }
 
   const symbolList = watchlist.items.map((item) => item.symbol);
-  const digest = await calculateWatchlistDigest(userId, symbolList);
+  let digest = await calculateWatchlistDigest(userId, symbolList);
+
+  // Apply sensitivity filter
+  digest = digest.map(d => {
+    const filteredEvents = d.events.filter(e => {
+      if (sensitivity === 'conservative' && e.tier !== 'critical') return false;
+      if (sensitivity === 'balanced' && e.tier === 'notable') return false;
+      return true;
+    });
+    return {
+      ...d,
+      events: filteredEvents,
+      unseenEventsCount: filteredEvents.filter(e => !e.acknowledged).length
+    };
+  }).filter(d => d.events.length > 0);
+
+  let unseenEvents = 0;
+  let criticalEvents = 0;
+  let sectorEvents = 0;
+  let highestScoreEvent: any = null;
+
+  for (const d of digest) {
+    unseenEvents += d.unseenEventsCount;
+    for (const e of d.events) {
+      if (!e.acknowledged) {
+        if (e.tier === 'critical') criticalEvents++;
+        if (e.symbol.startsWith('SECTOR_')) sectorEvents++;
+        
+        if (!highestScoreEvent || e.score > highestScoreEvent.score) {
+          highestScoreEvent = e;
+        }
+      }
+    }
+  }
+
+  let globalSummary = null;
+  if (unseenEvents > 0) {
+    let summaryText = `While you were away: ${unseenEvents} anomalies detected`;
+    if (sectorEvents > 0) {
+      summaryText += ` (${sectorEvents} Sector, ${unseenEvents - sectorEvents} Individual). `;
+    } else {
+      summaryText += `. `;
+    }
+    
+    if (criticalEvents > 0) {
+      summaryText += `${criticalEvents} CRITICAL. `;
+    }
+    
+    if (highestScoreEvent && highestScoreEvent.symbol) {
+      summaryText += `Biggest mover: ${highestScoreEvent.symbol.replace('SECTOR_', '')}.`;
+    }
+    globalSummary = summaryText;
+  }
 
   return {
     watchlist: {
@@ -190,5 +242,6 @@ export async function getWatchlistSummary(userId: string, watchlistId: string) {
       })),
     },
     digest,
+    globalSummary,
   };
 }
