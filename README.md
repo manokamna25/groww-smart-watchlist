@@ -29,15 +29,21 @@ When forced to build a "Market Watchlist", most developers build a simple table 
 *Addresses: "Help users understand what has meaningfully changed"*
 Instead of showing a boring "+2%", we built a math engine that calculates rolling Z-Scores on volume and price. When a user logs back in, the **Smart AI Digest** mathematically identifies true anomalies and says: *"While you were away: 1 anomaly detected. CRITICAL."* 
 
-#### 2. The "Ask Jarvis" Generative AI Explainer
+#### 2. Deterministic Narrative Engine (Zero LLM Latency)
 *Addresses: "Product Interpretation & Originality"*
-Retail investors see an anomaly but don't know what it means. We integrated a beautiful, slide-in **Generative AI Chat** that translates complex Black-Scholes math and "Greeks" into simple, actionable English, democratizing finance exactly like Groww's core mission.
+Instead of an expensive, slow, and non-deterministic LLM API call that can fail during a live demo, we built a deterministic template engine. It translates complex math and Z-scores into simple, actionable English. Every word generated is traceable to a specific mathematical signal, which is critical for compliance and defendability.
 
 #### 3. High-Performance Live Architecture
 *Addresses: "Engineering Depth & Reliability"*
 - **Live Candlestick Charts**: Integrated `lightweight-charts` by TradingView for 60fps canvas rendering of live OHLCV data.
 - **WebSocket Streaming**: Sub-10ms latency updates via a custom WebSocket architecture, moving away from slow, stale REST polling.
-- **Simulated Redis Pub/Sub**: The backend is architected to scale to millions of users by utilizing a Pub/Sub message broker pattern for market ticks.
+- **Architecture Designed to Scale**: We implemented a per-symbol Redis Pub/Sub model. This means the WebSocket gateway only keeps a channel open for actively watched symbols. The fan-out cost scales with the number of *unique symbols watched*, NOT the number of users.
+
+#### 4. Engineering Proofs & Edge Case Handling (Testable)
+*Addresses: "Edge Cases, Resilience, & Simplicity"*
+- **Post-Crash Recovery (Replay)**: If the WebSocket disconnects, the system automatically fetches missed events upon reconnection and fills the UI without duplicating data.
+- **Out-of-Order Tick Handling**: If market ticks arrive out of sequence, the engine resolves conflicts using the `exchange_timestamp` rather than the server's arrival time, guaranteeing data integrity.
+- **Config-Driven Thresholds**: The Z-score boundary tiers (Notable, Meaningful, Critical) are completely isolated in a config file, allowing risk management teams to tune thresholds in production without requiring an engineering deploy.
 
 #### 4. Voice Alerts (Web Speech API)
 *Addresses: "Originality & Thoughtfulness"*
