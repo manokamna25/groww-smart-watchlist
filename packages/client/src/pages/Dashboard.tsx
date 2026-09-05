@@ -349,9 +349,9 @@ export default function Dashboard() {
         <div className="absolute bottom-[-20%] right-[20%] w-[400px] h-[400px] bg-blue-500/10 rounded-full blur-[120px] pointer-events-none" />
 
         {/* Top Header */}
-        <header className="h-20 border-b border-white/5 flex items-center justify-between px-4 lg:px-8 bg-black/20 backdrop-blur-md z-20">
-          <div className="flex items-center gap-2 lg:gap-4">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+        <header className="border-b border-white/5 flex flex-col md:flex-row md:items-center justify-between px-4 lg:px-8 py-4 md:py-0 md:h-20 bg-black/20 backdrop-blur-md z-20 gap-4 md:gap-0">
+          <div className="flex items-center gap-2 lg:gap-4 w-full md:w-auto justify-between md:justify-start">
+            <h1 className="text-xl md:text-2xl font-bold whitespace-nowrap bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
               {activeTab === 'dashboard' && 'Market Overview'}
               {activeTab === 'intelligence' && 'Global AI Screener'}
               {activeTab === 'portfolio' && 'Smart Holdings'}
@@ -369,7 +369,7 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className="flex items-center gap-2 lg:gap-4 w-full md:w-auto">
             <button
               onClick={() => setIsCommandPaletteOpen(true)}
               className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-white/40 hover:text-white/80 hover:bg-white/10 transition-colors mr-2"
@@ -394,7 +394,7 @@ export default function Dashboard() {
                 }
                 setVoiceEnabled(!voiceEnabled);
               }}
-              className={`p-2 rounded-xl transition-all border ${
+              className={`p-2 rounded-xl transition-all border shrink-0 ${
                 voiceEnabled 
                   ? 'bg-groww-green/20 text-groww-green border-groww-green/50 shadow-[0_0_15px_rgba(0,208,156,0.3)]' 
                   : 'bg-white/5 text-white/40 hover:text-white border-white/10'
@@ -405,7 +405,7 @@ export default function Dashboard() {
             </button>
 
             {activeTab === 'dashboard' && (
-              <div className="flex items-center gap-2 lg:gap-6">
+              <div className="flex items-center gap-2 lg:gap-6 flex-1 md:flex-initial">
                 
                 {/* Alert Sensitivity Toggle */}
                 <div className="hidden 2xl:flex items-center bg-black/40 border border-white/10 rounded-xl p-1 backdrop-blur-md">
@@ -429,7 +429,7 @@ export default function Dashboard() {
                   </button>
                 </div>
 
-                <div className="relative group flex items-center">
+                <div className="relative group flex items-center flex-1 md:flex-initial">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2 text-white/40 group-focus-within:text-groww-green transition-colors z-10 flex items-center">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
                   </div>
@@ -441,7 +441,7 @@ export default function Dashboard() {
                         addItemMutation.mutate(addSymbol);
                       }
                     }}
-                    className="w-32 md:w-48 lg:w-72 bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 backdrop-blur-md rounded-full pl-11 pr-12 lg:pr-20 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:border-groww-green focus:bg-white/[0.05] focus:shadow-[0_0_20px_rgba(0,208,156,0.15)] transition-all"
+                    className="w-full md:w-48 lg:w-72 bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 hover:border-white/20 backdrop-blur-md rounded-full pl-11 pr-12 lg:pr-20 py-2.5 text-sm text-white placeholder-white/40 focus:outline-none focus:border-groww-green focus:bg-white/[0.05] focus:shadow-[0_0_20px_rgba(0,208,156,0.15)] transition-all"
                     placeholder="Track symbol..."
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center transition-opacity pointer-events-none hidden lg:flex">
@@ -524,19 +524,19 @@ export default function Dashboard() {
                     </button>
 
                     <div className="p-6 pb-2 cursor-pointer relative z-10" onClick={() => setExpandedSymbol(isExpanded ? null : item.symbol)}>
-                      <div className="flex justify-between items-start mb-4">
-                        <div>
-                          <div className="flex items-center gap-3">
-                            <h2 className="text-2xl font-bold tracking-tight text-white">{item.symbol}</h2>
+                      <div className="flex justify-between items-start mb-4 gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h2 className="text-xl md:text-2xl font-bold tracking-tight text-white truncate">{item.symbol}</h2>
                             <LiveTradersBadge symbol={item.symbol} />
                           </div>
                           <span className="text-xs font-mono text-white/40 uppercase tracking-wider">NSE EQUITIES</span>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-mono font-semibold tracking-tight text-white">
+                        <div className="text-right pr-6 flex-shrink-0">
+                          <div className="text-xl md:text-2xl font-mono font-semibold tracking-tight text-white">
                             ₹{price.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </div>
-                          <div className={`text-sm font-mono font-medium ${isPositive ? 'text-[#00D09C]' : 'text-[#EF4444]'}`}>
+                          <div className={`text-xs md:text-sm font-mono font-medium ${isPositive ? 'text-[#00D09C]' : 'text-[#EF4444]'}`}>
                             {isPositive ? '+' : ''}{Math.abs(price - prevPrice).toFixed(2)} ({isPositive ? '+' : ''}{((price - prevPrice)/prevPrice * 100).toFixed(2)}%)
                           </div>
                         </div>
