@@ -40,10 +40,16 @@ Retail traders can't stare at screens all day. We built a true **Service Worker*
 ### 3. Progressive Web App (PWA) Installability
 This isn't just a website. SmartWatch is a fully configured **Progressive Web App (PWA)**. Users can click "Add to Home Screen" on their mobile devices, and the app instantly installs as a native-feeling, fullscreen mobile application with zero browser chrome. 
 
-### 4. Generative AI "Jarvis" Explainer
+### 4. Catch & Share Brag Cards (Viral Growth Loop)
+Users can execute a Smart Trade and instantly generate a beautifully branded, SEBI-compliant PNG "Brag Card" to share on X/Twitter. We used `html-to-image` to generate these dynamically on the client side, powering a viral growth loop that drops Customer Acquisition Cost (CAC) to zero.
+
+### 5. SEBI Regulatory Compliance 
+We implemented the strict SEBI-mandated warning modals for Derivatives trading, proving we understand the real-world compliance constraints of Indian Fintechs. The platform enforces these disclosures before users can access Options data.
+
+### 6. Generative AI "Jarvis" Explainer
 When an anomaly hits, users can click **"Explain with AI"**. Our backend connects to Google Gemini to instantly generate a plain-English explanation of exactly what the anomaly means, complete with volume analysis and Greeks, helping retail users learn market dynamics on the fly.
 
-### 5. Full Database Authentication & Persistence (PostgreSQL + Prisma)
+### 7. Full Database Authentication & Persistence (PostgreSQL + Prisma)
 We didn't just mock the client state. The app uses a full **Neon PostgreSQL database** managed by **Prisma ORM**. Every user can securely register, log in, and persist their unique watchlists and portfolio data permanently in the database.
 
 ---
