@@ -15,17 +15,17 @@
 
 ---
 
-## 🏆 Hackathon Judging Criteria Alignment (How We Built a Winning Product)
+## 🎯 Core Technical Achievements
 
-We didn't just build a table of prices. We engineered a robust, institutional-grade product designed specifically to max out the hackathon grading rubric.
+We engineered a robust, institutional-grade architecture designed to handle real-world scale and edge cases.
 
-| Groww Rubric Criteria | Our Technical Implementation |
+| Engineering Focus | Technical Implementation |
 | :--- | :--- |
-| **"Help users understand what has meaningfully changed"** | We built a real-time **Z-Score Anomaly Engine**. Instead of showing arbitrary percentage changes, our backend calculates statistical standard deviations (Z-Scores) on both price and volume to mathematically prove an anomaly. The AI Digest then generates a plain-English explanation. |
-| **"Handle edge cases and ensure resilience"** | Implemented **Out-of-Order Tick Handling** (resolving WebSocket packets using exchange timestamps, not server arrival time) and **Connection Recovery** (gracefully fetching missed ticks if the WebSocket drops). |
-| **"Engineering Depth & Architecture"** | We bypassed slow REST APIs and built a **Hybrid Market Data Engine**. We connected directly to the live **Binance WebSocket API** to prove global scale handling, while using **Redis Pub/Sub** to fan-out WebSocket events only to users tracking specific assets. |
-| **"Product Execution & Completeness"** | This is a fully production-ready app. It features **PostgreSQL Database Authentication** (every user gets their own saved watchlist), a **Progressive Web App (PWA)** implementation for native mobile installability, and **Native OS Service Worker Push Notifications**. |
-| **"Originality & Thoughtfulness"** | We integrated the **Web Speech API** for Voice Alerts so day traders don't have to stare at their screens, and a **Generative AI "Jarvis"** (Google Gemini) to explain complex Options Greeks dynamically. |
+| **Mathematical Intelligence** | Built a real-time **Z-Score Anomaly Engine**. Instead of showing arbitrary percentage changes, our backend calculates statistical standard deviations (Z-Scores) on both price and volume to mathematically prove an anomaly. The AI Digest then generates a plain-English explanation. |
+| **Resilience & Edge Cases** | Implemented **Out-of-Order Tick Handling** (resolving WebSocket packets using exchange timestamps, not server arrival time) and **Connection Recovery** (gracefully fetching missed ticks if the WebSocket drops). |
+| **Scalable Architecture** | Bypassed slow REST APIs to build a **Hybrid Market Data Engine**. Connected directly to the live **Binance WebSocket API** to prove global scale handling, while using **Redis Pub/Sub** to fan-out WebSocket events only to users tracking specific assets. |
+| **Production Readiness** | Fully production-ready with **PostgreSQL Database Authentication** (isolated watchlists per user), a **Progressive Web App (PWA)** implementation for native mobile installability, and **Native OS Service Worker Push Notifications**. |
+| **User Experience (UX)** | Integrated the **Web Speech API** for Voice Alerts so day traders don't have to stare at their screens, and a **Generative AI Explainer** (Google Gemini) to translate complex Options Greeks dynamically. |
 
 ---
 
