@@ -667,7 +667,7 @@ export default function Dashboard() {
                   <div key={i} className="flex flex-col bg-white/[0.02] border border-white/10 rounded-xl overflow-hidden hover:bg-white/[0.05] transition-all cursor-pointer" onClick={() => setExpandedIntel(isExpanded ? null : i)}>
                     <div className="flex">
                       <div className={`w-2 ${item.tier === 'critical' ? 'bg-red-500' : item.tier === 'meaningful' ? 'bg-orange-500' : 'bg-yellow-500'}`} />
-                      <div className="flex-1 p-5 flex items-center justify-between">
+                      <div className="flex-1 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
                             <h3 className="font-bold text-lg">{item.sym}</h3>
@@ -675,7 +675,7 @@ export default function Dashboard() {
                           </div>
                           <p className="text-sm text-white/60">{item.desc}</p>
                         </div>
-                        <div className="text-right ml-8">
+                        <div className="text-left sm:text-right sm:ml-8 flex sm:block items-center gap-4 sm:gap-0">
                           <div className="font-mono text-lg font-bold">₹{item.price.toFixed(2)}</div>
                           <div className={`font-mono text-sm ${item.pct > 0 ? 'text-[#00D09C]' : 'text-[#EF4444]'}`}>
                             {item.pct > 0 ? '+' : ''}{item.pct.toFixed(2)}%
@@ -813,7 +813,7 @@ export default function Dashboard() {
                             <div className="text-white/50 text-xs mb-1">₹{item.avg.toFixed(2)}</div>
                             <div className="text-white font-medium">₹{item.ltp.toFixed(2)}</div>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-6 py-4 whitespace-normal min-w-[250px]">
                             {stressTestActive ? (
                               <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-2 max-w-xs animate-pulse-soft">
                                 <div className="text-xs font-bold text-red-400 mb-1">PROJECTED CRASH LOSS</div>
@@ -824,9 +824,9 @@ export default function Dashboard() {
                                 <span className="w-1.5 h-1.5 rounded-full bg-white/10" /> Monitoring...
                               </span>
                             ) : (
-                              <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-2 max-w-xs animate-pulse-soft">
-                                <div className="mb-1"><ChangeBadge tier={item.tier} /></div>
-                                <div className="text-xs text-orange-200/70 leading-snug">{item.desc}</div>
+                              <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-3 max-w-xs animate-pulse-soft">
+                                <div className="mb-2"><ChangeBadge tier={item.tier} /></div>
+                                <div className="text-xs text-orange-200/90 leading-relaxed font-medium">{item.desc}</div>
                               </div>
                             )}
                           </td>
