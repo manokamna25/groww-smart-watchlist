@@ -1,0 +1,17 @@
+{
+  "name": "Groww SmartWatch",
+  "short_name": "SmartWatch",
+  "description": "Intelligent monitoring that shows what actually matters",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#030305",
+  "theme_color": "#030305",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
