@@ -15,42 +15,35 @@
 
 ---
 
-## 🚀 The Problem
+## 🏆 Hackathon Judging Criteria Alignment (How We Built a Winning Product)
 
-Retail investors trade at a massive disadvantage. Institutional traders use Bloomberg terminals, high-frequency anomaly detection (Z-Scores), and Black-Scholes options pricing engines to find breakouts before they happen. Retail investors are stuck staring at static charts, reacting *after* the market moves.
+We didn't just build a table of prices. We engineered a robust, institutional-grade product designed specifically to max out the hackathon grading rubric.
 
-When forced to build a "Market Watchlist", most developers build a simple table of prices. But a list of prices doesn't tell a retail trader **why** a stock is moving, or **if** they should pay attention to it.
-
-## 💡 The Solution: Groww SmartWatch
-
-**SmartWatch** is a next-generation trading terminal built on Groww's design principles. It monitors thousands of assets simultaneously and alerts retail users the exact second an anomaly occurs. We didn't build an obvious watchlist; we built an **Institutional-grade Intelligence layer**.
+| Groww Rubric Criteria | Our Technical Implementation |
+| :--- | :--- |
+| **"Help users understand what has meaningfully changed"** | We built a real-time **Z-Score Anomaly Engine**. Instead of showing arbitrary percentage changes, our backend calculates statistical standard deviations (Z-Scores) on both price and volume to mathematically prove an anomaly. The AI Digest then generates a plain-English explanation. |
+| **"Handle edge cases and ensure resilience"** | Implemented **Out-of-Order Tick Handling** (resolving WebSocket packets using exchange timestamps, not server arrival time) and **Connection Recovery** (gracefully fetching missed ticks if the WebSocket drops). |
+| **"Engineering Depth & Architecture"** | We bypassed slow REST APIs and built a **Hybrid Market Data Engine**. We connected directly to the live **Binance WebSocket API** to prove global scale handling, while using **Redis Pub/Sub** to fan-out WebSocket events only to users tracking specific assets. |
+| **"Product Execution & Completeness"** | This is a fully production-ready app. It features **PostgreSQL Database Authentication** (every user gets their own saved watchlist), a **Progressive Web App (PWA)** implementation for native mobile installability, and **Native OS Service Worker Push Notifications**. |
+| **"Originality & Thoughtfulness"** | We integrated the **Web Speech API** for Voice Alerts so day traders don't have to stare at their screens, and a **Generative AI "Jarvis"** (Google Gemini) to explain complex Options Greeks dynamically. |
 
 ---
 
-## 🔥 Key Engineering Features & Judging Alignment
+## 🚀 The Core Features
 
 ### 1. Hybrid Market Data Engine (Binance WebSocket + High-Freq Simulator)
-*Addresses: "Engineering Depth & Reliability"*
 To prove our system handles true global scale, our Node.js backend connects directly to the **live Binance WebSocket API** (`wss://stream.binance.com`). If you add `BTCUSDT` to your watchlist, you are watching real, live global trades hitting our ingestion engine. For Indian equities (where free live WebSockets don't exist), we run a synchronized high-frequency deterministic simulator.
 
 ### 2. Native OS Push Notifications (Service Workers)
-*Addresses: "Edge Cases & Business Understanding"*
 Retail traders can't stare at screens all day. We built a true **Service Worker** (`sw.js`). Even if the user minimizes the browser or switches tabs, our WebSocket connection keeps monitoring. If a critical breakout happens, the Service Worker triggers a **Native OS Push Notification** directly to their lock screen or desktop notification center.
 
 ### 3. Progressive Web App (PWA) Installability
-*Addresses: "Product Execution"*
 This isn't just a website. SmartWatch is a fully configured **Progressive Web App (PWA)**. Users can click "Add to Home Screen" on their mobile devices, and the app instantly installs as a native-feeling, fullscreen mobile application with zero browser chrome. 
 
-### 4. "Meaningful Change" Detection (Z-Score Anomaly Engine)
-*Addresses: "Help users understand what has meaningfully changed"*
-Instead of showing a boring "+2%", we built a math engine that calculates rolling Z-Scores on volume and price. It separates "Quiet" noise from "Critical" anomalies. When you log in, the **Smart AI Digest** states: *"While you were away: 1 anomaly detected. CRITICAL."* 
-
-### 5. Generative AI "Jarvis" Explainer
-*Addresses: "Product Interpretation & Originality"*
+### 4. Generative AI "Jarvis" Explainer
 When an anomaly hits, users can click **"Explain with AI"**. Our backend connects to Google Gemini to instantly generate a plain-English explanation of exactly what the anomaly means, complete with volume analysis and Greeks, helping retail users learn market dynamics on the fly.
 
-### 6. Full Database Authentication & Persistence (PostgreSQL + Prisma)
-*Addresses: "Defensibility & Production Readiness"*
+### 5. Full Database Authentication & Persistence (PostgreSQL + Prisma)
 We didn't just mock the client state. The app uses a full **Neon PostgreSQL database** managed by **Prisma ORM**. Every user can securely register, log in, and persist their unique watchlists and portfolio data permanently in the database.
 
 ---
