@@ -11,6 +11,6 @@ export declare class SocketGateway {
     private incrementRefCount;
     private decrementRefCount;
     getRefCount(symbol: string): number;
-    broadcastDirect(symbol: string, eventName: 'tick' | 'change_event', payload: any): void;
+    broadcastDirect(symbol: string, eventName: 'tick' | 'change_event' | 'options:tick', payload: any): void;
 }
 export declare const socketGateway: SocketGateway;

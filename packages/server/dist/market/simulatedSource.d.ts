@@ -19,7 +19,7 @@ export declare class SimulatedMarketDataSource implements MarketDataSource {
     constructor();
     private initInstruments;
     getInstruments(): InstrumentProfile[];
-    injectEvent(symbol: string, type: 'spike' | 'gap' | 'volume_anomaly'): void;
+    injectEvent(symbol: string, type: 'spike' | 'spike_up' | 'spike_down' | 'gap' | 'volume_anomaly'): void;
     onTick(callback: (tick: Tick) => void | Promise<void>): void;
     generateTickForSymbol(symbol: string, indexPctChange?: number): Tick;
     stepAll(): Tick[];

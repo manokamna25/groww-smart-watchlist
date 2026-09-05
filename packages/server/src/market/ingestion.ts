@@ -16,6 +16,7 @@ export class IngestionEngine {
   private lastFired: Map<string, { tier: string, ts: number }> = new Map();
   private sectorAnomalies: Map<string, { symbol: string, direction: 'up' | 'down', ts: number }[]> = new Map();
   private instrumentSectors: Map<string, string> = new Map();
+  private lastProcessedTs: Map<string, number> = new Map();
 
   constructor(dataSource: MarketDataSource = simulatedMarketSource) {
     this.dataSource = dataSource;
@@ -46,6 +47,15 @@ export class IngestionEngine {
   }
 
   public async processTick(tick: Tick) {
+    // 0. Out-of-order tick rejection (Data Integrity)
+    const incomingTs = tick.exchangeTs.getTime();
+    const lastTs = this.lastProcessedTs.get(tick.symbol) || 0;
+    if (incomingTs < lastTs) {
+      console.warn(`[Data Integrity] Discarded out-of-order tick for ${tick.symbol}. Incoming: ${incomingTs}, Last: ${lastTs}`);
+      return null;
+    }
+    this.lastProcessedTs.set(tick.symbol, incomingTs);
+
     // 1. Persist tick to DB
     const savedTick = await prisma.priceTick.create({
       data: {

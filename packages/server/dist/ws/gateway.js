@@ -47,6 +47,10 @@ class SocketGateway {
                     const symbol = channel.replace('tick:', '');
                     this.io.to(`symbol:${symbol}`).emit('tick', data);
                 }
+                else if (channel.startsWith('options:tick:')) {
+                    const symbol = channel.replace('options:tick:', '');
+                    this.io.to(`symbol:${symbol}`).emit('options:tick', data);
+                }
                 else if (channel.startsWith('event:')) {
                     const symbol = channel.replace('event:', '');
                     this.io.to(`symbol:${symbol}`).emit('change_event', data);
@@ -79,22 +83,29 @@ class SocketGateway {
     incrementRefCount(symbol) {
         const current = this.refCountMap.get(symbol) || 0;
         this.refCountMap.set(symbol, current + 1);
-        if (current === 0 && redis_1.redisSub.status === 'ready') {
-            // First subscriber for this symbol -> open Redis channels
-            redis_1.redisSub.subscribe(`tick:${symbol}`, `event:${symbol}`);
+        if (current === 0) {
+            if (redis_1.redisSub.status === 'ready') {
+                redis_1.redisSub.subscribe(`tick:${symbol}`);
+                redis_1.redisSub.subscribe(`options:tick:${symbol}`);
+                redis_1.redisSub.subscribe(`event:${symbol}`);
+            }
         }
     }
     decrementRefCount(symbol) {
         const current = this.refCountMap.get(symbol) || 0;
-        if (current <= 1) {
-            this.refCountMap.delete(symbol);
-            if (redis_1.redisSub.status === 'ready') {
-                // Last subscriber disconnected -> close Redis channels
-                redis_1.redisSub.unsubscribe(`tick:${symbol}`, `event:${symbol}`);
+        if (current > 0) {
+            const next = current - 1;
+            if (next === 0) {
+                this.refCountMap.delete(symbol);
+                if (redis_1.redisSub.status === 'ready') {
+                    redis_1.redisSub.unsubscribe(`tick:${symbol}`);
+                    redis_1.redisSub.unsubscribe(`options:tick:${symbol}`);
+                    redis_1.redisSub.unsubscribe(`event:${symbol}`);
+                }
             }
-        }
-        else {
-            this.refCountMap.set(symbol, current - 1);
+            else {
+                this.refCountMap.set(symbol, next);
+            }
         }
     }
     getRefCount(symbol) {

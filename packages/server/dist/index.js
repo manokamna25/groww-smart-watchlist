@@ -12,6 +12,7 @@ const auth_routes_1 = require("./auth/auth.routes");
 const watchlist_routes_1 = require("./watchlist/watchlist.routes");
 const intelligence_routes_1 = require("./intelligence/intelligence.routes");
 const dev_routes_1 = require("./market/dev.routes");
+const market_routes_1 = require("./market/market.routes");
 const errorHandler_1 = require("./middleware/errorHandler");
 const gateway_1 = require("./ws/gateway");
 const redis_1 = require("./config/redis");
@@ -28,6 +29,7 @@ exports.app.use('/api/auth', auth_routes_1.authRouter);
 exports.app.use('/api/watchlists', watchlist_routes_1.watchlistRouter);
 exports.app.use('/api/intelligence', intelligence_routes_1.intelligenceRouter);
 exports.app.use('/api/dev', dev_routes_1.devRouter);
+exports.app.use('/api/market', market_routes_1.marketRouter);
 // Central error handler
 exports.app.use(errorHandler_1.errorHandler);
 // In production, serve the compiled React frontend statically

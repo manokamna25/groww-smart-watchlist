@@ -40,7 +40,7 @@ export declare function ackWatchlistItem(userId: string, watchlistId: string, sy
     lastViewedAt: Date;
     lastViewedPrice: number;
 }>;
-export declare function getWatchlistSummary(userId: string, watchlistId: string): Promise<{
+export declare function getWatchlistSummary(userId: string, watchlistId: string, sensitivity?: string): Promise<{
     watchlist: {
         id: string;
         userId: string;
@@ -70,4 +70,5 @@ export declare function getWatchlistSummary(userId: string, watchlistId: string)
         lastViewedAt: string | undefined;
         lastViewedPrice: number | undefined;
     }[];
+    globalSummary: string | null;
 }>;

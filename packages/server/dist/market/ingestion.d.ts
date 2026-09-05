@@ -3,6 +3,9 @@ export declare class IngestionEngine {
     private dataSource;
     private history;
     private indexHistory;
+    private lastFired;
+    private sectorAnomalies;
+    private instrumentSectors;
     constructor(dataSource?: MarketDataSource);
     seedInstruments(): Promise<void>;
     processTick(tick: Tick): Promise<{

@@ -28,7 +28,8 @@ exports.watchlistRouter.post('/', async (req, res, next) => {
 });
 exports.watchlistRouter.get('/:id/summary', async (req, res, next) => {
     try {
-        const summary = await (0, watchlist_service_1.getWatchlistSummary)(req.user.userId, req.params.id);
+        const sensitivity = req.query.sensitivity || 'balanced';
+        const summary = await (0, watchlist_service_1.getWatchlistSummary)(req.user.userId, req.params.id, sensitivity);
         res.json(summary);
     }
     catch (err) {

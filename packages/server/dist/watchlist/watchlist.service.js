@@ -141,7 +141,7 @@ async function ackWatchlistItem(userId, watchlistId, symbol) {
     });
     return { success: true, symbol: cleanSymbol, lastViewedAt: state.lastViewedAt, lastViewedPrice: state.lastViewedPrice };
 }
-async function getWatchlistSummary(userId, watchlistId) {
+async function getWatchlistSummary(userId, watchlistId, sensitivity = 'balanced') {
     const watchlist = await database_1.prisma.watchlist.findFirst({
         where: { id: watchlistId, userId },
         include: {
@@ -152,7 +152,57 @@ async function getWatchlistSummary(userId, watchlistId) {
         throw new errorHandler_1.AppError('Watchlist not found', 404);
     }
     const symbolList = watchlist.items.map((item) => item.symbol);
-    const digest = await (0, digest_1.calculateWatchlistDigest)(userId, symbolList);
+    let digest = await (0, digest_1.calculateWatchlistDigest)(userId, symbolList);
+    // Apply sensitivity filter
+    digest = digest.map(d => {
+        const filteredEvents = d.events.filter(e => {
+            if (sensitivity === 'conservative' && e.tier !== 'critical')
+                return false;
+            if (sensitivity === 'balanced' && e.tier === 'notable')
+                return false;
+            return true;
+        });
+        return {
+            ...d,
+            events: filteredEvents,
+            unseenEventsCount: filteredEvents.filter(e => !e.acknowledged).length
+        };
+    }).filter(d => d.events.length > 0);
+    let unseenEvents = 0;
+    let criticalEvents = 0;
+    let sectorEvents = 0;
+    let highestScoreEvent = null;
+    for (const d of digest) {
+        unseenEvents += d.unseenEventsCount;
+        for (const e of d.events) {
+            if (!e.acknowledged) {
+                if (e.tier === 'critical')
+                    criticalEvents++;
+                if (e.symbol.startsWith('SECTOR_'))
+                    sectorEvents++;
+                if (!highestScoreEvent || e.score > highestScoreEvent.score) {
+                    highestScoreEvent = e;
+                }
+            }
+        }
+    }
+    let globalSummary = null;
+    if (unseenEvents > 0) {
+        let summaryText = `While you were away: ${unseenEvents} anomalies detected`;
+        if (sectorEvents > 0) {
+            summaryText += ` (${sectorEvents} Sector, ${unseenEvents - sectorEvents} Individual). `;
+        }
+        else {
+            summaryText += `. `;
+        }
+        if (criticalEvents > 0) {
+            summaryText += `${criticalEvents} CRITICAL. `;
+        }
+        if (highestScoreEvent && highestScoreEvent.symbol) {
+            summaryText += `Biggest mover: ${highestScoreEvent.symbol.replace('SECTOR_', '')}.`;
+        }
+        globalSummary = summaryText;
+    }
     return {
         watchlist: {
             id: watchlist.id,
@@ -167,5 +217,6 @@ async function getWatchlistSummary(userId, watchlistId) {
             })),
         },
         digest,
+        globalSummary,
     };
 }

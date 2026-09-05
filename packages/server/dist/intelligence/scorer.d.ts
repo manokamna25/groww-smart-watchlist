@@ -5,6 +5,7 @@ export interface ScoredResult {
     signals: ChangeSignals;
     pricePctChange: number;
     indexPctChange: number;
+    confidence: 'high' | 'medium' | 'low';
 }
 export interface TickInput {
     price: number;

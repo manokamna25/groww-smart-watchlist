@@ -15,6 +15,8 @@ exports.redisSub = new ioredis_1.default(env_1.env.REDIS_URL, {
     maxRetriesPerRequest: 3,
     lazyConnect: true,
 });
+exports.redisPub.on('error', () => { });
+exports.redisSub.on('error', () => { });
 async function initRedis() {
     if (exports.redisPub.status === 'ready' || exports.redisPub.status === 'connecting')
         return;
