@@ -150,6 +150,13 @@ export default function Dashboard() {
     });
   }, []);
 
+  // Request notification permission on mount
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   const handleChangeEvent = useCallback((data: any) => {
     // Filter based on user sensitivity preference
     if (sensitivity === 'conservative' && data.tier !== 'critical') return;
@@ -166,6 +173,21 @@ export default function Dashboard() {
     if (shouldPush) {
       setPushNotification(data);
       setTimeout(() => setPushNotification(null), 6000);
+
+      // Native Background Push Notification
+      if (document.hidden && 'Notification' in window && Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(`Smart Watchlist: ${data.symbol}`, {
+              body: data.narrative,
+              icon: '/icon.svg',
+              badge: '/icon.svg',
+              tag: 'anomaly',
+              data: { url: window.location.href }
+            });
+          });
+        }
+      }
 
       // AI Voice Alert
       if (voiceEnabled && 'speechSynthesis' in window) {

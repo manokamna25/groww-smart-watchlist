@@ -1,9 +1,4 @@
 import { ChangeSignals, ChangeTier } from '@smart-watchlist/shared';
-import * as fs from 'fs';
-import * as path from 'path';
-
-const configPath = path.resolve(__dirname, '../config/risk-config.json');
-const riskConfig = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
 
 export interface ScoredResult {
   tier: ChangeTier;
@@ -82,11 +77,11 @@ export function scoreTick(
   }
 
   // Calculate composite score
-  const w1 = riskConfig.weights.z_score;
-  const w2 = riskConfig.weights.relative_move;
-  const w3 = riskConfig.weights.volume_bonus;
-  const w4 = riskConfig.weights.breakout_bonus;
-  const w5 = riskConfig.weights.gap_bonus;
+  const w1 = 1.0; // z-score
+  const w2 = 1.2; // relative move
+  const w3 = 0.8; // volume ratio multiplier
+  const w4 = 0.8; // breakout
+  const w5 = 1.0; // gap
 
   const absZ = Math.abs(zScore);
   const absRel = Math.abs(relativeMove);
@@ -99,11 +94,11 @@ export function scoreTick(
 
   // Assign tier thresholds
   let tier: ChangeTier = 'quiet';
-  if (score >= riskConfig.score_thresholds.critical) {
+  if (score >= 5.0) {
     tier = 'critical';
-  } else if (score >= riskConfig.score_thresholds.meaningful) {
+  } else if (score >= 3.2) {
     tier = 'meaningful';
-  } else if (score >= riskConfig.score_thresholds.notable) {
+  } else if (score >= 1.8) {
     tier = 'notable';
   }
 

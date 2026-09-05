@@ -49,7 +49,7 @@ export function useWatchlistSocket(
     const onConnect = async () => {
       if (lastEventTsRef.current) {
         try {
-          const missedEvents = await api.intelligence.sync(lastEventTsRef.current, symbols);
+          const missedEvents = await api.intelligence.sync(lastEventTsRef.current);
           if (missedEvents && missedEvents.length > 0) {
             console.log(`Synced ${missedEvents.length} missed events since reconnect`);
             // The events are returned in ascending order, so we process them sequentially

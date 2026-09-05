@@ -1,6 +1,7 @@
 import { prisma } from '../config/database';
 import { MarketDataSource, Tick } from './adapter';
 import { simulatedMarketSource } from './simulatedSource';
+import { binanceMarketSource } from './binanceSource';
 import { scoreTick, TickInput } from '../intelligence/scorer';
 import { generateNarrative } from '../intelligence/narrator';
 import { redisPub } from '../config/redis';
@@ -16,7 +17,6 @@ export class IngestionEngine {
   private lastFired: Map<string, { tier: string, ts: number }> = new Map();
   private sectorAnomalies: Map<string, { symbol: string, direction: 'up' | 'down', ts: number }[]> = new Map();
   private instrumentSectors: Map<string, string> = new Map();
-  private lastProcessedTs: Map<string, number> = new Map();
 
   constructor(dataSource: MarketDataSource = simulatedMarketSource) {
     this.dataSource = dataSource;
@@ -44,18 +44,27 @@ export class IngestionEngine {
         },
       });
     }
+
+    const cryptoInstruments = binanceMarketSource.getInstruments();
+    for (const inst of cryptoInstruments) {
+      await prisma.instrument.upsert({
+        where: { symbol: inst.symbol },
+        update: {
+          name: inst.name,
+          exchange: inst.exchange,
+          sector: inst.sector,
+        },
+        create: {
+          symbol: inst.symbol,
+          name: inst.name,
+          exchange: inst.exchange,
+          sector: inst.sector,
+        },
+      });
+    }
   }
 
   public async processTick(tick: Tick) {
-    // 0. Out-of-order tick rejection (Data Integrity)
-    const incomingTs = tick.exchangeTs.getTime();
-    const lastTs = this.lastProcessedTs.get(tick.symbol) || 0;
-    if (incomingTs < lastTs) {
-      console.warn(`[Data Integrity] Discarded out-of-order tick for ${tick.symbol}. Incoming: ${incomingTs}, Last: ${lastTs}`);
-      return null;
-    }
-    this.lastProcessedTs.set(tick.symbol, incomingTs);
-
     // 1. Persist tick to DB
     const savedTick = await prisma.priceTick.create({
       data: {
@@ -221,19 +230,24 @@ export class IngestionEngine {
   }
 
   public start() {
-    this.dataSource.onTick(async (tick) => {
+    const handleTick = async (tick: Tick) => {
       try {
         await this.processTick(tick);
       } catch (err) {
         console.error(`Error ingesting tick for ${tick.symbol}:`, err);
       }
-    });
+    };
+
+    this.dataSource.onTick(handleTick);
+    binanceMarketSource.onTick(handleTick);
 
     this.dataSource.start();
+    binanceMarketSource.start();
   }
 
   public stop() {
     this.dataSource.stop();
+    binanceMarketSource.stop();
   }
 }
 

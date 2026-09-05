@@ -47,7 +47,7 @@ export const api = {
       request<any>(`/watchlists/${id}/items/${symbol}/ack`, { method: 'POST' }),
   },
   intelligence: {
-    sync: (since: string, symbols: string[]) => request<any[]>('/sync', { method: 'POST', body: JSON.stringify({ since, symbols }) }),
+    sync: (afterTs: string) => request<any[]>(`/intelligence/sync?afterTs=${encodeURIComponent(afterTs)}`),
     breakdown: (eventId: string) => request<any>(`/intelligence/events/${eventId}/breakdown`),
     ack: (eventId: string) => request<any>(`/intelligence/events/${eventId}/ack`, { method: 'POST' }),
   },
